@@ -3355,6 +3355,7 @@ async function printCurrentPreview() {
 }
 
 function markdownToHtml(markdown, sourcePath = "") {
+  const visibleMarkdown = stripMarkdownComments(markdown);
   const context = {
     sourcePath,
     blocks: [],
@@ -3365,7 +3366,7 @@ function markdownToHtml(markdown, sourcePath = "") {
     code: []
   };
 
-  for (const line of markdown.replaceAll("\r\n", "\n").split("\n")) {
+  for (const line of visibleMarkdown.replaceAll("\r\n", "\n").split("\n")) {
     processMarkdownLine(context, line);
   }
 
@@ -3374,6 +3375,42 @@ function markdownToHtml(markdown, sourcePath = "") {
   flushMarkdownTable(context);
   if (context.inCode) flushMarkdownCode(context, true);
   return context.blocks.join("\n") || "<p>Start writing.</p>";
+}
+
+function stripMarkdownComments(markdown) {
+  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
+  let inCode = false;
+  let inComment = false;
+
+  return lines.map((line) => {
+    if (line.startsWith("```")) {
+      inCode = !inCode;
+      return line;
+    }
+    if (inCode) return line;
+
+    let output = "";
+    let index = 0;
+    while (index < line.length) {
+      if (inComment) {
+        const end = line.indexOf("%%", index);
+        if (end === -1) return output;
+        index = end + 2;
+        inComment = false;
+        continue;
+      }
+
+      const start = line.indexOf("%%", index);
+      if (start === -1) {
+        output += line.slice(index);
+        break;
+      }
+      output += line.slice(index, start);
+      index = start + 2;
+      inComment = true;
+    }
+    return output;
+  }).join("\n");
 }
 
 function appendListItem(context, match, tag) {
@@ -3588,6 +3625,7 @@ function inlineMarkdown(value, sourcePath = "") {
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+    .replace(/==(\S(?:.*?\S)?)==/g, "<mark>$1</mark>")
     .replace(/\^([^^\s][^^]*)\^/g, "<sup>$1</sup>")
     .replace(/:([a-z0-9_+-]+):/g, (_m, name) => emojiChar(name) || _m);
 

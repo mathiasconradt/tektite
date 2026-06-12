@@ -1267,6 +1267,13 @@ div.tree-row.active {
   opacity: 0.6;
 }
 
+.markdown-preview mark {
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 1px 4px;
+}
+
 .markdown-preview .task-item {
   list-style: none;
   margin-left: -20px;

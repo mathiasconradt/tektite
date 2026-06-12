@@ -2,6 +2,12 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.64] - 2026-06-12
+
+- Refactor: split Electron main process into focused modules for config, menus, windows, IPC, Git, files, print, and terminal services
+- Preview: support Obsidian-style highlights with `==text==`
+- Preview: support Obsidian-style comments with `%% comment %%` hidden from rendered output
+
 ## [0.1.63] - 2026-06-09
 
 - Fix: line highlighting no longer drifts while editing or scrolling (fixes [#33](https://github.com/mathiasconradt/tektite/issues/33))
