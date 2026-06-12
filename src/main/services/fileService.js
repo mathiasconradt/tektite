@@ -86,7 +86,7 @@ async function createNote(rootPath, requestedName, folder = "", templatePath = "
 }
 
 async function listTemplates(rootPath, templatesPath = "") {
-  const relPath = (templatesPath || DEFAULT_TEMPLATES_PATH).replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
+  const relPath = trimSlashes((templatesPath || DEFAULT_TEMPLATES_PATH).replaceAll("\\", "/"));
   const templatesDir = path.join(rootPath, relPath);
   assertInsideVault(rootPath, templatesDir);
   try {
@@ -385,7 +385,7 @@ async function updateMovedFolderReferences(rootPath, oldFolderPath, newFolderPat
 }
 
 function rewriteAssetLinks(markdown, notePath, oldAssetPath, newAssetPath) {
-  return markdown.replace(/(!?\[[^\]]*\]\()([^)]+)(\))/g, (match, prefix, href, suffix) => {
+  return replaceMarkdownLinks(markdown, ({ match, prefix, href, suffix }) => {
     const decodedHref = decodeMarkdownLink(href);
     if (/^[a-z]+:\/\//i.test(decodedHref)) return match;
     if (resolveMarkdownReference(notePath, decodedHref) !== oldAssetPath) return match;
@@ -394,7 +394,7 @@ function rewriteAssetLinks(markdown, notePath, oldAssetPath, newAssetPath) {
 }
 
 function rewriteFolderMarkdownLinks(markdown, notePath, oldFolderPath, newFolderPath) {
-  return markdown.replace(/(!?\[[^\]]*\]\()([^)]+)(\))/g, (match, prefix, href, suffix) => {
+  return replaceMarkdownLinks(markdown, ({ match, prefix, href, suffix }) => {
     const decodedHref = decodeMarkdownLink(href);
     if (/^[a-z]+:\/\//i.test(decodedHref)) return match;
     const moved = movedPathInsideFolder(resolveMarkdownReference(notePath, decodedHref), oldFolderPath, newFolderPath);
@@ -404,7 +404,7 @@ function rewriteFolderMarkdownLinks(markdown, notePath, oldFolderPath, newFolder
 }
 
 function rewriteWikiNoteLinks(markdown, notePath, oldNotePath, newNotePath) {
-  return markdown.replace(/\[\[([^\]]+)\]\]/g, (match, target) => {
+  return replaceWikiLinks(markdown, ({ match, target }) => {
     const pipeIndex = target.indexOf("|");
     const targetPart = pipeIndex >= 0 ? target.slice(0, pipeIndex) : target;
     const aliasPart = pipeIndex >= 0 ? target.slice(pipeIndex) : "";
@@ -417,7 +417,7 @@ function rewriteWikiNoteLinks(markdown, notePath, oldNotePath, newNotePath) {
 }
 
 function rewriteFolderWikiLinks(markdown, notePath, oldFolderPath, newFolderPath) {
-  return markdown.replace(/\[\[([^\]]+)\]\]/g, (match, target) => {
+  return replaceWikiLinks(markdown, ({ match, target }) => {
     const pipeIndex = target.indexOf("|");
     const targetPart = pipeIndex >= 0 ? target.slice(0, pipeIndex) : target;
     const aliasPart = pipeIndex >= 0 ? target.slice(pipeIndex) : "";
@@ -430,6 +430,70 @@ function rewriteFolderWikiLinks(markdown, notePath, oldFolderPath, newFolderPath
   });
 }
 
+function replaceMarkdownLinks(markdown, transform) {
+  let output = "";
+  let index = 0;
+
+  while (index < markdown.length) {
+    const openBracket = markdown.indexOf("[", index);
+    if (openBracket === -1) {
+      output += markdown.slice(index);
+      break;
+    }
+
+    const prefixStart = openBracket > 0 && markdown[openBracket - 1] === "!" ? openBracket - 1 : openBracket;
+    const closeBracket = markdown.indexOf("]", openBracket + 1);
+    if (closeBracket === -1 || markdown[closeBracket + 1] !== "(") {
+      output += markdown.slice(index, openBracket + 1);
+      index = openBracket + 1;
+      continue;
+    }
+
+    const closeParen = markdown.indexOf(")", closeBracket + 2);
+    if (closeParen === -1) {
+      output += markdown.slice(index, openBracket + 1);
+      index = openBracket + 1;
+      continue;
+    }
+
+    const match = markdown.slice(prefixStart, closeParen + 1);
+    const prefix = markdown.slice(prefixStart, closeBracket + 2);
+    const href = markdown.slice(closeBracket + 2, closeParen);
+    const suffix = ")";
+    output += markdown.slice(index, prefixStart);
+    output += transform({ match, prefix, href, suffix });
+    index = closeParen + 1;
+  }
+
+  return output;
+}
+
+function replaceWikiLinks(markdown, transform) {
+  let output = "";
+  let index = 0;
+
+  while (index < markdown.length) {
+    const start = markdown.indexOf("[[", index);
+    if (start === -1) {
+      output += markdown.slice(index);
+      break;
+    }
+
+    const end = markdown.indexOf("]]", start + 2);
+    if (end === -1) {
+      output += markdown.slice(index);
+      break;
+    }
+
+    const match = markdown.slice(start, end + 2);
+    output += markdown.slice(index, start);
+    output += transform({ match, target: markdown.slice(start + 2, end) });
+    index = end + 2;
+  }
+
+  return output;
+}
+
 function movedPathInsideFolder(resolvedPath, oldFolderPath, newFolderPath) {
   if (!resolvedPath || resolvedPath === oldFolderPath) return "";
   if (!resolvedPath.startsWith(`${oldFolderPath}/`)) return "";
@@ -437,7 +501,7 @@ function movedPathInsideFolder(resolvedPath, oldFolderPath, newFolderPath) {
 }
 
 function resolveWikiReference(notePath, target) {
-  const clean = decodeMarkdownLink(target).trim().replace(/^\/+/, "");
+  const clean = trimLeadingSlashes(decodeMarkdownLink(target).trim());
   if (!clean) return "";
   const candidates = path.extname(clean) ? [clean] : [`${clean}.md`, clean];
   for (const candidate of candidates) {
@@ -448,15 +512,15 @@ function resolveWikiReference(notePath, target) {
 }
 
 function wikiTargetFor(notePath, oldTarget, newNotePath) {
-  const relative = relativeMarkdownPath(notePath, newNotePath).replace(/\.md$/i, "");
-  if (oldTarget.includes("/") || oldTarget.startsWith(".") || oldTarget.startsWith("/")) return relative.replace(/^\.\//, "");
+  const relative = removeMarkdownExtension(relativeMarkdownPath(notePath, newNotePath));
+  if (oldTarget.includes("/") || oldTarget.startsWith(".") || oldTarget.startsWith("/")) return trimLeadingDotSlash(relative);
   return path.basename(newNotePath, path.extname(newNotePath));
 }
 
 function resolveMarkdownReference(notePath, href) {
-  const clean = href.trim().replace(/^<|>$/g, "").replace(/#.*$/, "");
+  const clean = stripFragment(stripWrappingAngles(href));
   const noteFolder = parentPosix(notePath);
-  const joined = clean.startsWith("/") ? clean.replace(/^\/+/, "") : path.posix.join(noteFolder, clean);
+  const joined = clean.startsWith("/") ? trimLeadingSlashes(clean) : path.posix.join(noteFolder, clean);
   return normalizePosix(joined);
 }
 
@@ -467,7 +531,7 @@ function relativeMarkdownPath(notePath, assetPath) {
 }
 
 function decodeMarkdownLink(value) {
-  const trimmed = value.trim().replace(/^<|>$/g, "");
+  const trimmed = stripWrappingAngles(value);
   try {
     return decodeURIComponent(trimmed);
   } catch {
@@ -504,7 +568,7 @@ function noteTitle(relativePath) {
 }
 
 function sanitizeNoteName(value) {
-  return sanitizeEntryName(value, "Untitled").replace(/\.md$/i, "") || "Untitled";
+  return removeMarkdownExtension(sanitizeEntryName(value, "Untitled")) || "Untitled";
 }
 
 function renamedEntryName(currentName, requestedName, type) {
@@ -515,9 +579,9 @@ function renamedEntryName(currentName, requestedName, type) {
   const requested = sanitizeEntryName(requestedName || fallback, fallback);
   const requestedExtension = path.extname(requested);
 
-  if (type === "note") return `${requested.replace(/\.md$/i, "") || fallback}.md`;
+  if (type === "note") return `${removeMarkdownExtension(requested) || fallback}.md`;
   if (requestedExtension && imageExtensions.has(requestedExtension.toLowerCase())) return requested;
-  return `${requested.replace(/\.[^.]+$/, "") || fallback}${currentExtension}`;
+  return `${path.basename(requested, path.extname(requested)) || fallback}${currentExtension}`;
 }
 
 function imageMimeType(extension) {
@@ -606,7 +670,7 @@ function sanitizeEntryName(value, fallback) {
 }
 
 function normalizeRelative(value) {
-  return normalizePosix(toPosix(value || "").replace(/^\/+/, ""));
+  return normalizePosix(trimLeadingSlashes(toPosix(value || "")));
 }
 
 function normalizePosix(value) {
@@ -646,6 +710,41 @@ function assetPayload(candidate) {
     name: path.basename(candidate),
     label: path.basename(candidate, path.extname(candidate))
   };
+}
+
+function trimSlashes(value) {
+  return trimTrailingSlashes(trimLeadingSlashes(value));
+}
+
+function trimLeadingSlashes(value) {
+  let index = 0;
+  while (value[index] === "/") index += 1;
+  return value.slice(index);
+}
+
+function trimTrailingSlashes(value) {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end -= 1;
+  return value.slice(0, end);
+}
+
+function trimLeadingDotSlash(value) {
+  return value.startsWith("./") ? value.slice(2) : value;
+}
+
+function stripWrappingAngles(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("<") && trimmed.endsWith(">")) return trimmed.slice(1, -1);
+  return trimmed;
+}
+
+function stripFragment(value) {
+  const index = value.indexOf("#");
+  return index >= 0 ? value.slice(0, index) : value;
+}
+
+function removeMarkdownExtension(value) {
+  return value.toLowerCase().endsWith(".md") ? value.slice(0, -3) : value;
 }
 
 module.exports = {

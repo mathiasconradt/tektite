@@ -9,6 +9,15 @@ const gitExecutableCandidates = [
   "/usr/local/bin/git",
   "/opt/homebrew/bin/git"
 ];
+const sshExecutableCandidates = [
+  "/usr/bin/ssh",
+  "/bin/ssh",
+  "/usr/local/bin/ssh",
+  "/opt/homebrew/bin/ssh",
+  String.raw`C:\Windows\System32\OpenSSH\ssh.exe`,
+  String.raw`C:\Program Files\Git\usr\bin\ssh.exe`,
+  String.raw`C:\Program Files\Git\bin\ssh.exe`
+];
 const gitSafePath = "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin";
 
 async function sync(rootPath, send = () => {}) {
@@ -90,19 +99,21 @@ async function checkSshAuth(rootPath, send) {
   const hostMatch = remoteUrl.match(/[@/]([a-zA-Z0-9._-]+)[:/]/);
   if (!hostMatch) return;
   const host = hostMatch[1];
+  const sshExecutable = await resolveSshExecutable();
 
   await new Promise((resolve) => {
     execFile(
-      "ssh",
+      sshExecutable,
       ["-T", `git@${host}`, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new"],
       { env: { PATH: gitSafePath, SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK || "" } },
       (error, _stdout, stderr) => {
         const output = (stderr || "").toLowerCase();
         const authenticated = !error || output.includes("successfully authenticated") || output.includes("welcome to");
         if (!authenticated) {
+          const stderrText = stderr ? `${stderr.trim()}\n` : "";
           send({
             type: "chunk",
-            text: `Warning: SSH authentication to ${host} failed. Git sync will likely fail.\n${stderr ? `${stderr.trim()}\n` : ""}`
+            text: `Warning: SSH authentication to ${host} failed. Git sync will likely fail.\n${stderrText}`
           });
         }
         resolve();
@@ -169,10 +180,23 @@ function gitFailureReason({ timedOut, signal, exitCode }) {
 }
 
 async function resolveGitExecutable() {
-  for (const candidate of gitExecutableCandidates) {
+  return resolveTrustedExecutable(gitExecutableCandidates, "Git executable");
+}
+
+async function resolveSshExecutable() {
+  try {
+    return await resolveTrustedExecutable(sshExecutableCandidates, "SSH executable");
+  } catch (error) {
+    if (process.platform === "win32") return "ssh";
+    throw error;
+  }
+}
+
+async function resolveTrustedExecutable(candidates, label) {
+  for (const candidate of candidates) {
     if (await isSafeExecutable(candidate)) return candidate;
   }
-  throw new Error("Git executable was not found in a trusted system location.");
+  throw new Error(`${label} was not found in a trusted system location.`);
 }
 
 async function isSafeExecutable(candidate) {
