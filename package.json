@@ -1,7 +1,7 @@
 {
   "name": "tektite",
   "productName": "Tektite",
-  "version": "0.1.66",
+  "version": "0.1.67",
   "description": "Tektite is a local-first Markdown knowledge base desktop app.",
   "main": "src/main.js",
   "scripts": {
