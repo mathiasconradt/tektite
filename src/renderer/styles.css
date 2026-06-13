@@ -527,7 +527,10 @@ div.tree-row.active {
 }
 
 .tree-caret {
+  display: inline-block;
   color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
 }
 
 .tree-leaf-row {
