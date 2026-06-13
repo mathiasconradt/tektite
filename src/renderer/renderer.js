@@ -2928,12 +2928,12 @@ function renderTreeLeafNode(node, query) {
   }
 
   const button = document.createElement("button");
-  button.className = `tree-row${isSelected(node.path, node.type) ? " selected" : ""}${node.path === state.activePath ? " active" : ""}`;
+  button.className = `tree-row tree-leaf-row${isSelected(node.path, node.type) ? " selected" : ""}${node.path === state.activePath ? " active" : ""}`;
   button.type = "button";
   button.draggable = true;
   button.dataset.path = node.path;
   button.dataset.type = node.type;
-  button.innerHTML = `${treeIconSvg(node.type)}<span class="tree-label">${escapeHtml(label)}</span>`;
+  button.innerHTML = `<span class="tree-caret-spacer" aria-hidden="true"></span>${treeIconSvg(node.type)}<span class="tree-label">${escapeHtml(label)}</span>`;
   button.addEventListener("click", () => {
     if (node.type === "note") openNote(node.path, { focusEditor: false });
     else openAsset(node.path, { focusEditor: false });

@@ -470,10 +470,6 @@ button.tree-row {
   font: inherit;
 }
 
-#fileTree > button.tree-row:not(.vault-root-row) {
-  padding-left: 34px;
-}
-
 .tree-row:hover {
   background: var(--tree-hover);
 }
@@ -534,6 +530,15 @@ div.tree-row.active {
   color: var(--muted);
 }
 
+.tree-leaf-row {
+  grid-template-columns: 24px 26px minmax(0, 1fr);
+}
+
+.tree-caret-spacer {
+  display: block;
+  width: 24px;
+}
+
 .tree-caret-button,
 .tree-label-button {
   display: grid;
@@ -560,7 +565,7 @@ div.tree-row.active {
 .tree-children {
   margin-left: 18px;
   border-left: 1px solid var(--tree-guide);
-  padding-left: 14px;
+  padding-left: 8px;
 }
 
 .workspace {

@@ -2,6 +2,10 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.67] - 2026-06-13
+
+- Fix: align file/folder tree indentation so icons and labels clearly follow hierarchy levels
+
 ## [0.1.64] - 2026-06-12
 
 - Refactor: split Electron main process into focused modules for config, menus, windows, IPC, Git, files, print, and terminal services
