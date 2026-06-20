@@ -2,5 +2,7 @@
   "templatesPath": "",
   "autoLinkUrls": true,
   "tocListStyle": "unordered",
-  "tocIncludeSubfolders": false
+  "tocIncludeSubfolders": false,
+  "treeFontSize": 13,
+  "editorFontSize": 13
 }
