@@ -411,12 +411,6 @@ body.resizing-y textarea {
   opacity: 0.45;
 }
 
-#suffixIcon {
-  font-size: 11px;
-  font-weight: 760;
-  letter-spacing: 0;
-}
-
 .danger-button {
   color: var(--danger);
 }
@@ -773,6 +767,17 @@ div.tree-row.active {
   outline: none;
 }
 
+.editor-body.line-wrap-off #editor,
+.editor-body.line-wrap-off .editor-find-overlay pre {
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.editor-body.line-wrap-off #editor {
+  overflow-x: auto;
+}
+
 
 .editor-body {
   position: relative;
@@ -800,7 +805,7 @@ div.tree-row.active {
   width: 100%;
   box-sizing: border-box;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 15px;
+  font-size: var(--editor-font-size);
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
@@ -940,6 +945,12 @@ div.tree-row.active {
 }
 
 .fmt-button:active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.fmt-button.active {
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--accent);

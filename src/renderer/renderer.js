@@ -21,6 +21,7 @@ const state = {
   showPreviewPane: true,
   showTerminalPane: false,
   showLineNumbers: false,
+  editorLineWrap: true,
   terminalContentCollapsed: false,
   showTagsPane: true,
   showGraphPane: true,
@@ -96,13 +97,12 @@ const els = {
   githubSyncButton: document.getElementById("githubSyncButton"),
   themeButton: document.getElementById("themeButton"),
   themeIcon: document.getElementById("themeIcon"),
-  suffixButton: document.getElementById("suffixButton"),
-  suffixIcon: document.getElementById("suffixIcon"),
   searchInput: document.getElementById("searchInput"),
   fileTree: document.getElementById("fileTree"),
   noteTitle: document.getElementById("noteTitle"),
   notePath: document.getElementById("notePath"),
   saveState: document.getElementById("saveState"),
+  editorBody: document.querySelector(".editor-body"),
   editorTabs: document.getElementById("editorTabs"),
   editor: document.getElementById("editor"),
   imageViewer: document.getElementById("imageViewer"),
@@ -176,6 +176,7 @@ const els = {
   fmtImage: document.getElementById("fmtImage"),
   fmtTable: document.getElementById("fmtTable"),
   fmtToc: document.getElementById("fmtToc"),
+  fmtLineWrap: document.getElementById("fmtLineWrap"),
   findBar: document.getElementById("findBar"),
   findInput: document.getElementById("findInput"),
   findCount: document.getElementById("findCount"),
@@ -203,6 +204,7 @@ function boot() {
   state.showPreviewPane = localStorage.getItem("tektite:showPreviewPane") !== "0";
   state.showTerminalPane = localStorage.getItem("tektite:showTerminalPane") === "1";
   state.showLineNumbers = localStorage.getItem("tektite:showLineNumbers") === "1";
+  state.editorLineWrap = localStorage.getItem("tektite:editorLineWrap") !== "0";
   state.terminalContentCollapsed = localStorage.getItem("tektite:terminalContentCollapsed") === "1";
   state.showTagsPane = localStorage.getItem("tektite:showTagsPane") !== "0";
   state.showGraphPane = localStorage.getItem("tektite:showGraphPane") !== "0";
@@ -210,13 +212,13 @@ function boot() {
   state.graphContentCollapsed = localStorage.getItem("tektite:graphContentCollapsed") === "1";
   loadLayout();
   applyLayout();
+  applyEditorLineWrap();
   updateSuffixButton();
   els.openVaultButton.addEventListener("click", chooseVault);
   els.refreshButton.addEventListener("click", refreshVault);
   els.gitSyncButton.addEventListener("click", syncGitVault);
   els.githubSyncButton.addEventListener("click", syncGitVault);
   els.themeButton.addEventListener("click", toggleTheme);
-  els.suffixButton.addEventListener("click", toggleFileExtensions);
   els.searchInput.addEventListener("input", renderTree);
   els.editor.addEventListener("input", onEditorInput);
   els.editor.addEventListener("keydown", onEditorKeydown);
@@ -308,6 +310,7 @@ function boot() {
   els.fmtImage.addEventListener("click", () => insertMarkdownLink(true));
   els.fmtTable.addEventListener("click", insertTable);
   els.fmtToc.addEventListener("click", () => insertTableOfContents());
+  els.fmtLineWrap.addEventListener("click", toggleEditorLineWrap);
   els.editor.addEventListener("scroll", () => { syncFindOverlayScroll(); syncLineNumbersScroll(); });
   els.settingsButton.addEventListener("click", openSettingsDialog);
   els.settingsForm.addEventListener("submit", onSettingsSubmit);
@@ -682,6 +685,24 @@ function toggleLineNumbers() {
   syncPaneStateToMenu();
 }
 
+function toggleEditorLineWrap() {
+  state.editorLineWrap = !state.editorLineWrap;
+  localStorage.setItem("tektite:editorLineWrap", state.editorLineWrap ? "1" : "0");
+  applyEditorLineWrap();
+  renderLineNumbers();
+  updateCurrentLineHighlight();
+  if (state.find.active) updateFindOverlay();
+}
+
+function applyEditorLineWrap() {
+  els.editor.wrap = state.editorLineWrap ? "soft" : "off";
+  els.editorBody.classList.toggle("line-wrap-off", !state.editorLineWrap);
+  els.fmtLineWrap.classList.toggle("active", state.editorLineWrap);
+  els.fmtLineWrap.setAttribute("aria-pressed", String(state.editorLineWrap));
+  els.fmtLineWrap.dataset.tooltip = state.editorLineWrap ? "Disable Line Wrap" : "Enable Line Wrap";
+  els.fmtLineWrap.setAttribute("aria-label", state.editorLineWrap ? "Disable Line Wrap" : "Enable Line Wrap");
+}
+
 function applyLineNumbers() {
   const editorBody = document.querySelector(".editor-body");
   if (!editorBody) return;
@@ -710,7 +731,9 @@ function renderLineNumbers() {
 
   const lines = els.editor.value.split("\n");
   els.lineNumbers.innerHTML = lines.map((line, i) => {
-    const visualLines = Math.max(1, Math.ceil((line.length || 0.1) / charsPerLine));
+    const visualLines = state.editorLineWrap
+      ? Math.max(1, Math.ceil((line.length || 0.1) / charsPerLine))
+      : 1;
     const h = visualLines * lineHeight;
     return `<span class="line-number" style="height:${h}px">${i + 1}</span>`;
   }).join("");
@@ -735,6 +758,15 @@ function updateCurrentLineHighlight() {
   let lineHeight = Number.parseFloat(style.lineHeight);
   if (Number.isNaN(lineHeight)) {
     lineHeight = fontSize * 1.65;
+  }
+
+  if (!state.editorLineWrap) {
+    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+    const cursor = els.editor.selectionStart;
+    const lineIndex = els.editor.value.slice(0, cursor).split("\n").length - 1;
+    const top = paddingTop + lineIndex * lineHeight - els.editor.scrollTop;
+    applyCurrentLineHighlightTop(top, lineHeight);
+    return;
   }
 
   const mirror = document.createElement("div");
@@ -773,6 +805,10 @@ function updateCurrentLineHighlight() {
 
   mirror.remove();
 
+  applyCurrentLineHighlightTop(top, lineHeight);
+}
+
+function applyCurrentLineHighlightTop(top, lineHeight) {
   if (top < -lineHeight || top > els.editor.clientHeight) {
     els.currentLineHighlight.style.opacity = "0";
     return;
@@ -965,10 +1001,7 @@ function applyGraphContentVisibility() {
 }
 
 function updateSuffixButton() {
-  els.suffixIcon.textContent = state.showFileExtensions ? "abc" : ".md";
-  const label = state.showFileExtensions ? "Hide File Suffixes" : "Show File Suffixes";
-  els.suffixButton.dataset.tooltip = label;
-  els.suffixButton.setAttribute("aria-label", label);
+  syncPaneStateToMenu();
 }
 
 function updateGitSyncButton() {
@@ -2767,6 +2800,9 @@ function applyFontSizes() {
   const root = document.documentElement;
   root.style.setProperty("--tree-font-size", `${state.settings.treeFontSize}px`);
   root.style.setProperty("--editor-font-size", `${state.settings.editorFontSize}px`);
+  renderLineNumbers();
+  updateCurrentLineHighlight();
+  if (state.find.active) updateFindOverlay();
 }
 
 async function restoreWorkspaceState() {
@@ -4406,7 +4442,7 @@ function updateFindOverlay() {
 
 function syncFindOverlayScroll() {
   const pre = els.editorFindOverlay.querySelector("pre");
-  if (pre) pre.style.transform = `translateY(-${els.editor.scrollTop}px)`;
+  if (pre) pre.style.transform = `translate(${-els.editor.scrollLeft}px, ${-els.editor.scrollTop}px)`;
 }
 
 function escapeHtml(value) {

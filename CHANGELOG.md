@@ -2,6 +2,13 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.69] - 2026-06-20
+
+- Editor: add formatting-bar toggle for line wrap
+- Fix: line numbers and current-line highlight now align correctly when line wrap is disabled
+- Fix: find highlights stay aligned after changing editor font size
+- UI: remove file suffix toggle from the action bar; View menu option remains
+
 ## [0.1.67] - 2026-06-13
 
 - Fix: align file/folder tree indentation so icons and labels clearly follow hierarchy levels
