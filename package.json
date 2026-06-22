@@ -5,7 +5,8 @@
   "description": "Tektite is a local-first Markdown knowledge base desktop app.",
   "main": "src/main.js",
   "scripts": {
-    "postinstall": "node scripts/copy-vendor.js",
+    "postinstall": "node scripts/postinstall.js",
+    "rebuild:native": "electron-rebuild -f -w node-pty",
     "start": "node scripts/start.js",
     "dev": "electron .",
     "package:mac": "electron-packager . Tektite --platform=darwin --icon=assets/icons/tektite-icon.icns --overwrite --no-asar",
@@ -21,6 +22,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@electron/packager": "^20.0.0",
+    "@electron/rebuild": "^4.0.4",
     "electron": "^42.1.0"
   },
   "dependencies": {

@@ -72,6 +72,13 @@ npm run dev
 
 In dev mode on macOS, the host process may still appear as Electron.
 
+On Linux, `npm install` rebuilds the native terminal module for Electron automatically. If your npm setup blocks lifecycle scripts or the terminal module fails to load, run:
+
+```sh
+npm run rebuild:native
+npm run dev
+```
+
 ## Packaging
 
 ```sh

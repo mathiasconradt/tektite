@@ -1,11 +1,6 @@
 const fsSync = require("node:fs");
 
 let pty;
-try {
-  pty = require("node-pty");
-} catch {
-  pty = null;
-}
 
 class TerminalService {
   constructor({ app }) {
@@ -14,6 +9,7 @@ class TerminalService {
   }
 
   create(sender, cwd, cols, rows) {
+    if (pty === undefined) pty = loadPty();
     if (!pty) return null;
     const shell = process.env.SHELL || "/bin/sh";
     const safeCwd = cwd && fsSync.existsSync(cwd) ? cwd : this.app.getPath("home");
@@ -50,6 +46,14 @@ class TerminalService {
       } catch {}
       this.sessions.delete(pid);
     }
+  }
+}
+
+function loadPty() {
+  try {
+    return require("node-pty");
+  } catch {
+    return null;
   }
 }
 

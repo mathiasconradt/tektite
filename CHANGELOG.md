@@ -2,6 +2,13 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.71] - 2026-06-22
+
+- Linux: rebuild native terminal module during install when possible
+- Linux: add `npm run rebuild:native` fallback for Electron native modules
+- Fix: avoid loading the native terminal module until terminal is opened
+- Accessibility: add labels for editor and search inputs
+
 ## [0.1.69] - 2026-06-20
 
 - Editor: add formatting-bar toggle for line wrap
