@@ -1,6 +1,8 @@
 pi_session_id
 codex_session_id
 claude_session_id
+opencode_session_id
+opencode.json
 .lean-ctx
 
 archive

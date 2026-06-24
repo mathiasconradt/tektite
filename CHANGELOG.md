@@ -2,6 +2,12 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.72] - 2026-06-24
+
+- Fix: Enter key in editor no longer triggers find-bar navigation when cursor is in the editor pane
+- Fix: typing in editor with find bar open no longer steals focus back to the search input
+- Fix: editing in editor with find bar open no longer moves text cursor to the current search match
+
 ## [0.1.71] - 2026-06-22
 
 - Linux: rebuild native terminal module during install when possible

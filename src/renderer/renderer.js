@@ -2317,6 +2317,7 @@ function restoreEditorHistory(delta) {
 function onFindBarKeydown(event) {
   if (!state.find.active) return false;
   if (event.key === "Enter") {
+    if (document.activeElement !== els.findInput) return false;
     event.preventDefault();
     navigateFind(event.shiftKey ? -1 : 1);
     return true;
@@ -4396,8 +4397,13 @@ function updateFindMatches() {
     return;
   }
   if (state.find.index < 0 || state.find.index >= matches.length) state.find.index = 0;
-  selectFindMatch(state.find.index);
-  els.findInput.focus();
+  if (document.activeElement === els.findInput) {
+    selectFindMatch(state.find.index);
+    els.findInput.focus();
+  } else {
+    els.findCount.textContent = `${state.find.index + 1} of ${matches.length}`;
+    updateFindOverlay();
+  }
 }
 
 function navigateFind(delta) {
