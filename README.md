@@ -125,4 +125,10 @@ X: https://x.com/mathiasconradt
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=mathiasconradt/tektite&type=timeline&logscale&legend=top-left)](https://www.star-history.com/?repos=mathiasconradt%2Ftektite&type=timeline&logscale=&legend=top-left)
+<a href="https://www.star-history.com/?repos=mathiasconradt%2Ftektite&type=timeline&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=mathiasconradt/tektite&type=timeline&theme=dark&logscale&legend=top-left&sealed_token=IJEddIRiWRUW4FMsAu_ePGb_GeeY3fBmWUZHbCa7R1459Neh5YXkxD8cfPc8sSoglZqJ8OpdEN4vXizzMsu1iiX5SDM3jOag_xQMliTBykft67v9zqPl9XWDMriT6vzvywSHYtR8Jpz7a5nDzpkfWQ-Ioagxmi9-_Wwiz0FehekKn2b0gR1feZXmBKP-" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=mathiasconradt/tektite&type=timeline&logscale&legend=top-left&sealed_token=IJEddIRiWRUW4FMsAu_ePGb_GeeY3fBmWUZHbCa7R1459Neh5YXkxD8cfPc8sSoglZqJ8OpdEN4vXizzMsu1iiX5SDM3jOag_xQMliTBykft67v9zqPl9XWDMriT6vzvywSHYtR8Jpz7a5nDzpkfWQ-Ioagxmi9-_Wwiz0FehekKn2b0gR1feZXmBKP-" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=mathiasconradt/tektite&type=timeline&logscale&legend=top-left&sealed_token=IJEddIRiWRUW4FMsAu_ePGb_GeeY3fBmWUZHbCa7R1459Neh5YXkxD8cfPc8sSoglZqJ8OpdEN4vXizzMsu1iiX5SDM3jOag_xQMliTBykft67v9zqPl9XWDMriT6vzvywSHYtR8Jpz7a5nDzpkfWQ-Ioagxmi9-_Wwiz0FehekKn2b0gR1feZXmBKP-" />
+ </picture>
+</a>
