@@ -7,6 +7,10 @@ All notable changes to Tektite are documented here.
 - Fix: Enter key in editor no longer triggers find-bar navigation when cursor is in the editor pane
 - Fix: typing in editor with find bar open no longer steals focus back to the search input
 - Fix: editing in editor with find bar open no longer moves text cursor to the current search match
+- Fix: path traversal hardening in fileService and gitService (SonarQube S2083)
+- Fix: backtracking regex patterns in renderer replaced with linear alternatives (SonarQube S8786)
+- Fix: deprecated CSS `word-break: break-word` replaced with standard `overflow-wrap`
+- CI: `npm ci --ignore-scripts` with explicit postinstall; `npx` replaced with `npm exec` (SonarQube S6505/S8543)
 
 ## [0.1.71] - 2026-06-22
 
