@@ -3415,7 +3415,15 @@ function markdownToHtml(markdown, sourcePath = "") {
 }
 
 function stripMarkdownComments(markdown) {
-  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
+  const normalized = markdown.replaceAll("\r\n", "\n");
+
+  // Strip HTML comments <!-- ... --> (including multiline), skipping code blocks
+  const withoutHtml = normalized.replace(/(```[\s\S]*?```)|<!--[\s\S]*?-->/g, (match, codeBlock) => {
+    return codeBlock !== undefined ? codeBlock : "";
+  });
+
+  // Strip Obsidian %% comments line by line, skipping code blocks
+  const lines = withoutHtml.split("\n");
   let inCode = false;
   let inComment = false;
 

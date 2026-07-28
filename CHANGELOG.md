@@ -2,6 +2,10 @@
 
 All notable changes to Tektite are documented here.
 
+## [0.1.74] - 2026-07-28
+
+- Fix: HTML comments (`<!-- ... -->`) now hidden in preview; content no longer rendered as Markdown (fixes [#36](https://github.com/mathiasconradt/tektite/issues/36))
+
 ## [0.1.72] - 2026-06-24
 
 - Fix: Enter key in editor no longer triggers find-bar navigation when cursor is in the editor pane
