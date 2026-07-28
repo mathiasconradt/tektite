@@ -1836,7 +1836,7 @@ function relativeMarkdownLink(sourcePath, targetPath) {
 function localImageUrl(target, sourcePath = "") {
   const decoded = decodeLink(target);
   if (/^[a-z]+:\/\//i.test(decoded)) return null;
-  const clean = decoded.replace(/#.*$/u, "").trim();
+  const clean = decoded.replace(/#[^\r\n]*/u, "").trim();
   const extension = clean.split(".").pop()?.toLowerCase();
   if (!["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(extension)) return null;
 
@@ -2396,7 +2396,7 @@ function insertSeparator() {
 }
 
 function urlFilename(url) {
-  const segment = url.replace(/[?#].*$/, "").split("/").findLast(Boolean) || "link";
+  const segment = url.replace(/[?#][^\r\n]*/, "").split("/").findLast(Boolean) || "link";
   return segment.replace(/\.[^.]+$/, "") || "link";
 }
 
@@ -3462,14 +3462,14 @@ function processMarkdownLine(context, line) {
   if (context.inCode) { context.code.push(line); return; }
   if (!line.trim()) return flushMarkdownBlocks(context);
 
-  const heading = line.match(/^(#{1,6})\s+(.+)$/);
+  const heading = line.match(/^(#{1,6})\s+([^\r\n]+)/);
   if (heading) return appendMarkdownHeading(context, heading);
   if (/^---+$/.test(line.trim())) return appendMarkdownRule(context);
 
-  const unorderedItem = line.match(/^(\s*)[-*+]\s+(.+)$/);
+  const unorderedItem = line.match(/^(\s*)[-*+]\s+([^\r\n]+)/);
   if (unorderedItem) { appendListItem(context, unorderedItem, "ul"); return; }
 
-  const orderedItem = line.match(/^(\s*)\d+\.\s+(.+)$/);
+  const orderedItem = line.match(/^(\s*)\d+\.\s+([^\r\n]+)/);
   if (orderedItem) { appendListItem(context, orderedItem, "ol"); return; }
 
   if (/^\|.*\|/.test(line)) {
@@ -3538,7 +3538,7 @@ function buildNestedList(items, sourcePath) {
     if (item.indent > baseIndent) { i++; continue; }
     let j = i + 1;
     while (j < items.length && items[j].indent > baseIndent) j++;
-    const checkMatch = item.text.match(/^\[([x ])\]\s+(.+)$/i);
+    const checkMatch = item.text.match(/^\[([x ])\]\s+([^\r\n]+)/i);
     let liContent;
     if (checkMatch) {
       const checked = checkMatch[1].toLowerCase() === "x" ? " checked" : "";
@@ -3621,7 +3621,7 @@ function inlineMarkdown(value, sourcePath = "") {
     return token;
   });
 
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+  text = text.replace(/\[([^\]\r\n]+)\]\(([^)\r\n]+)\)/g, (_match, label, href) => {
     const decoded = decodeLink(href);
     const linkLabel = restore(tokens, label);
     // Pure anchor: #section
@@ -3643,7 +3643,7 @@ function inlineMarkdown(value, sourcePath = "") {
     return stash(tokens, `<span class="wiki-link missing">${linkLabel}</span>`);
   });
 
-  text = text.replace(/\[\[([^\]]+)\]\]/g, (_match, target) => {
+  text = text.replace(/\[\[([^\]\r\n]+)\]\]/g, (_match, target) => {
     const [rawTarget, alias] = target.split("|");
     const note = resolveNote(rawTarget, sourcePath);
     const label = alias || rawTarget.replace(/#.*$/, "");
@@ -3703,8 +3703,8 @@ function emojiChar(name) {
 function resolveNote(target, sourcePath = "") {
   const clean = decodeLink(target)
     .replace(/^\/+/, "")
-    .replace(/#.*$/, "")
-    .replace(/\|.*$/, "")
+    .replace(/#[^\r\n]*/, "")
+    .replace(/\|[^\r\n]*/, "")
     .trim();
 
   if (!clean) return null;
@@ -3814,8 +3814,8 @@ function parseLinksFromNotes() {
 
 function extractTargets(markdown) {
   const targets = [];
-  const wiki = /\[\[([^\]]+)\]\]/g;
-  const md = /(?<!!)\[[^\]]+\]\(([^)]+)\)/g;
+  const wiki = /\[\[([^\]\r\n]+)\]\]/g;
+  const md = /(?<!!)\[[^\]\r\n]+\]\(([^)\r\n]+)\)/g;
   let match;
 
   const wikiTargets = [];

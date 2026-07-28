@@ -31,7 +31,10 @@ jobs:
         run: sed -i '' 's|https://repox.jfrog.io/artifactory/api/npm/npm/|https://registry.npmjs.org/|g' package-lock.json 2>/dev/null || sed -i 's|https://repox.jfrog.io/artifactory/api/npm/npm/|https://registry.npmjs.org/|g' package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Run postinstall
+        run: node scripts/postinstall.js
 
       - name: Syntax check
         run: |
@@ -41,7 +44,7 @@ jobs:
           node --check scripts/start.js
 
       - name: Package macOS app
-        run: npx electron-packager . Tektite --platform=darwin --arch=arm64,x64 --icon=assets/icons/tektite-icon.icns --overwrite --no-asar
+        run: npm exec -- electron-packager . Tektite --platform=darwin --arch=arm64,x64 --icon=assets/icons/tektite-icon.icns --overwrite --no-asar
 
       - name: Create Homebrew cask zip
         run: |

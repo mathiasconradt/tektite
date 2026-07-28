@@ -5,15 +5,16 @@ const DEFAULT_TEMPLATES_PATH = ".tektite/templates";
 const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"]);
 
 async function validateVaultRoot(rootPath) {
+  const normalizedRoot = path.resolve(rootPath);
   let stat;
   try {
-    stat = await fs.stat(rootPath);
+    stat = await fs.stat(normalizedRoot);
   } catch (error) {
-    if (error?.code === "ENOENT") return vaultNotFound(rootPath);
+    if (error?.code === "ENOENT") return vaultNotFound(normalizedRoot);
     throw error;
   }
 
-  if (!stat.isDirectory()) return vaultNotFound(rootPath);
+  if (!stat.isDirectory()) return vaultNotFound(normalizedRoot);
   return { ok: true };
 }
 
@@ -70,7 +71,7 @@ async function createNote(rootPath, requestedName, folder = "", templatePath = "
   let candidate = path.posix.join(baseFolder, `${safeName}.md`);
   let index = 2;
 
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     candidate = path.posix.join(baseFolder, `${safeName} ${index}.md`);
     index += 1;
   }
@@ -87,8 +88,7 @@ async function createNote(rootPath, requestedName, folder = "", templatePath = "
 
 async function listTemplates(rootPath, templatesPath = "") {
   const relPath = trimSlashes((templatesPath || DEFAULT_TEMPLATES_PATH).replaceAll("\\", "/"));
-  const templatesDir = path.join(rootPath, relPath);
-  assertInsideVault(rootPath, templatesDir);
+  const templatesDir = resolveVaultPath(rootPath, relPath);
   try {
     const entries = await fs.readdir(templatesDir, { withFileTypes: true });
     return entries
@@ -101,8 +101,7 @@ async function listTemplates(rootPath, templatesPath = "") {
 
 async function loadSettings(rootPath) {
   try {
-    const settingsFile = path.join(rootPath, ".tektite", "settings.json");
-    assertInsideVault(rootPath, settingsFile);
+    const settingsFile = resolveVaultPath(rootPath, path.join(".tektite", "settings.json"));
     const raw = await fs.readFile(settingsFile, "utf8");
     const parsed = JSON.parse(raw);
     return {
@@ -119,8 +118,7 @@ async function loadSettings(rootPath) {
 }
 
 async function saveSettings(rootPath, settings) {
-  const settingsFile = path.join(rootPath, ".tektite", "settings.json");
-  assertInsideVault(rootPath, settingsFile);
+  const settingsFile = resolveVaultPath(rootPath, path.join(".tektite", "settings.json"));
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
   await fs.writeFile(settingsFile, JSON.stringify(settings, null, 2), "utf8");
   return true;
@@ -132,7 +130,7 @@ async function createFolder(rootPath, requestedName, parentFolder = "") {
   let candidate = path.posix.join(baseFolder, safeName);
   let index = 2;
 
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     candidate = path.posix.join(baseFolder, `${safeName} ${index}`);
     index += 1;
   }
@@ -193,7 +191,7 @@ async function moveEntry(rootPath, relativePath, type, targetFolder = "") {
   let index = 2;
   const parsed = path.parse(baseName);
 
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     const nextName = stat.isDirectory() ? `${baseName} ${index}` : `${parsed.name} ${index}${parsed.ext}`;
     candidate = path.posix.join(destinationFolder, nextName);
     index += 1;
@@ -218,7 +216,7 @@ async function importImage(rootPath, sourcePath, targetFolder = "") {
   let candidate = path.posix.join(baseFolder, `${sourceName}${extension}`);
   let index = 2;
 
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     candidate = path.posix.join(baseFolder, `${sourceName} ${index}${extension}`);
     index += 1;
   }
@@ -242,7 +240,7 @@ async function importFileOrDirectory(rootPath, sourcePath, targetFolder = "") {
     const baseName = sanitizeEntryName(path.basename(sourcePath, extension), "file");
     candidate = path.posix.join(baseFolder, `${baseName}${extension}`);
     let index = 2;
-    while (await exists(path.join(rootPath, candidate))) {
+    while (await exists(resolveVaultPath(rootPath, candidate))) {
       candidate = path.posix.join(baseFolder, `${baseName} ${index}${extension}`);
       index += 1;
     }
@@ -250,7 +248,7 @@ async function importFileOrDirectory(rootPath, sourcePath, targetFolder = "") {
     const sourceName = sanitizeEntryName(path.basename(sourcePath), "folder");
     candidate = path.posix.join(baseFolder, sourceName);
     let index = 2;
-    while (await exists(path.join(rootPath, candidate))) {
+    while (await exists(resolveVaultPath(rootPath, candidate))) {
       candidate = path.posix.join(baseFolder, `${sourceName} ${index}`);
       index += 1;
     }
@@ -292,6 +290,7 @@ async function readAssetDataUrl(rootPath, relativePath) {
 }
 
 async function readDirectory(rootPath, currentPath) {
+  assertInsideVault(rootPath, currentPath);
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
   const children = [];
 
@@ -552,15 +551,18 @@ function parentPosix(value) {
 function resolveVaultPath(rootPath, relativePath) {
   const normalizedRoot = path.resolve(rootPath);
   const resolved = path.resolve(normalizedRoot, relativePath);
-  assertInsideVault(normalizedRoot, resolved);
+  if (resolved !== normalizedRoot && !resolved.startsWith(normalizedRoot + path.sep)) {
+    throw new Error("Requested path is outside the vault.");
+  }
   return resolved;
 }
 
 function assertInsideVault(rootPath, candidatePath) {
   const normalizedRoot = path.resolve(rootPath);
   const normalizedCandidate = path.resolve(candidatePath);
-  const relative = path.relative(normalizedRoot, normalizedCandidate);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Requested path is outside the vault.");
+  if (normalizedCandidate !== normalizedRoot && !normalizedCandidate.startsWith(normalizedRoot + path.sep)) {
+    throw new Error("Requested path is outside the vault.");
+  }
 }
 
 function noteTitle(relativePath) {
@@ -643,7 +645,7 @@ function hasOriginalClipboardName(value) {
 async function uniqueOriginalAssetPath(rootPath, baseFolder, baseName, extension) {
   let candidate = path.posix.join(baseFolder, `${baseName}${extension}`);
   let index = 2;
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     candidate = path.posix.join(baseFolder, `${baseName} ${index}${extension}`);
     index += 1;
   }
@@ -653,7 +655,7 @@ async function uniqueOriginalAssetPath(rootPath, baseFolder, baseName, extension
 async function uniqueGeneratedAssetPath(rootPath, baseFolder, baseName, extension) {
   let index = 1;
   let candidate = path.posix.join(baseFolder, `${baseName}-${index}${extension}`);
-  while (await exists(path.join(rootPath, candidate))) {
+  while (await exists(resolveVaultPath(rootPath, candidate))) {
     index += 1;
     candidate = path.posix.join(baseFolder, `${baseName}-${index}${extension}`);
   }

@@ -1,7 +1,7 @@
 const { execFile, spawn } = require("node:child_process");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { assertInsideVault } = require("./fileService");
+const { assertInsideVault, resolveVaultPath } = require("./fileService");
 
 const gitExecutableCandidates = [
   "/usr/bin/git",
@@ -70,8 +70,8 @@ async function sync(rootPath, send = () => {}) {
 
 async function hasGitRepository(rootPath) {
   try {
-    assertInsideVault(rootPath, path.join(rootPath, ".git"));
-    await fs.access(path.join(rootPath, ".git"));
+    const gitPath = resolveVaultPath(rootPath, ".git");
+    await fs.access(gitPath);
     return true;
   } catch {
     return false;
@@ -80,8 +80,7 @@ async function hasGitRepository(rootPath) {
 
 async function gitProviderFor(rootPath) {
   try {
-    const configPath = path.join(rootPath, ".git", "config");
-    assertInsideVault(rootPath, configPath);
+    const configPath = resolveVaultPath(rootPath, path.join(".git", "config"));
     const config = await fs.readFile(configPath, "utf8");
     return /\bgithub\.com[:/]/i.test(config) || /\bgithub\.com\b/i.test(config) ? "github" : "git";
   } catch {
