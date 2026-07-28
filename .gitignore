@@ -13,6 +13,14 @@ skills-lock.json
 .mcp.json
 .codex/config.toml
 
+# Serena AI - local/generated only (project.yml is committed)
+.serena/cache/
+.serena/memories/
+.serena/project.local.yml
+
+# UA (Understand AI) - fully generated index/cache
+.ua/
+
 # Tektite local packaged app launched by npm start
 .tektite-run/
 
