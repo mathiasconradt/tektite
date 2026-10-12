@@ -13,14 +13,12 @@ cask "tektite" do
   desc "Local-first Markdown knowledge base desktop app"
   homepage "https://github.com/mathiasconradt/tektite"
 
-  depends_on macos: :big_sur
+  depends_on :macos
 
   app "Tektite.app"
 
-  preflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-cr", "#{staged_path}/Tektite.app"],
-                   sudo: false
+  preflight_steps do
+    run "/usr/bin/xattr", args: ["-cr", "{{staged_path}}/Tektite.app"]
   end
 
   zap trash: [

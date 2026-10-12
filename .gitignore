@@ -13,7 +13,8 @@ skills-lock.json
 .mcp.json
 .codex/config.toml
 
-# Serena AI - local/generated only (project.yml is committed)
+# Serena AI - local/generated
+.serena/project.yml
 .serena/cache/
 .serena/memories/
 .serena/project.local.yml
