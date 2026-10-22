@@ -9,7 +9,9 @@ fs.mkdirSync(vendorDir, { recursive: true });
 const files = [
   ["node_modules/@xterm/xterm/lib/xterm.js", "src/vendor/xterm.js"],
   ["node_modules/@xterm/xterm/css/xterm.css", "src/vendor/xterm.css"],
-  ["node_modules/@xterm/addon-fit/lib/addon-fit.js", "src/vendor/addon-fit.js"]
+  ["node_modules/@xterm/addon-fit/lib/addon-fit.js", "src/vendor/addon-fit.js"],
+  ["node_modules/@highlightjs/cdn-assets/highlight.min.js", "src/vendor/highlight.min.js"],
+  ["node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css", "src/vendor/highlight-github-dark.min.css"]
 ];
 
 for (const [src, dest] of files) {
