@@ -3367,9 +3367,12 @@ function collapsedFoldersKey() {
   return `tektite:collapsed:${state.rootPath || "none"}`;
 }
 
+let highlightTimer = null;
+
 function renderPreview(markdown) {
   els.preview.innerHTML = markdownToHtml(markdown, state.activePath);
-  highlightPreviewCode();
+  clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(highlightPreviewCode, 150);
 }
 
 function highlightPreviewCode() {
