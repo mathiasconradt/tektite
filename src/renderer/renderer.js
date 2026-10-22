@@ -3435,43 +3435,45 @@ function markdownToHtml(markdown, sourcePath = "") {
 
 function stripMarkdownComments(markdown) {
   const normalized = markdown.replaceAll("\r\n", "\n");
-
-  // Strip HTML comments <!-- ... --> (including multiline), skipping code blocks
-  const withoutHtml = normalized.replace(/(```[\s\S]*?```)|<!--[\s\S]*?-->/g, (match, codeBlock) => {
-    return codeBlock !== undefined ? codeBlock : "";
-  });
-
-  // Strip Obsidian %% comments line by line, skipping code blocks
-  const lines = withoutHtml.split("\n");
-  let inCode = false;
-  let inComment = false;
+  const lines = normalized.split("\n");
+  let fence = null;
+  let comment = null;
 
   return lines.map((line) => {
-    if (isMarkdownCodeFenceLine(line)) {
-      inCode = !inCode;
+    if (fence) {
+      if (isClosingMarkdownCodeFence({ codeFence: fence }, line)) fence = null;
       return line;
     }
-    if (inCode) return line;
+
+    const opened = markdownCodeFence(line);
+    if (opened) {
+      fence = opened;
+      return line;
+    }
 
     let output = "";
     let index = 0;
     while (index < line.length) {
-      if (inComment) {
-        const end = line.indexOf("%%", index);
+      if (comment) {
+        const end = line.indexOf(comment === "html" ? "-->" : "%%", index);
         if (end === -1) return output;
-        index = end + 2;
-        inComment = false;
+        index = end + (comment === "html" ? 3 : 2);
+        comment = null;
         continue;
       }
 
-      const start = line.indexOf("%%", index);
-      if (start === -1) {
+      const htmlStart = line.indexOf("<!--", index);
+      const obsidianStart = line.indexOf("%%", index);
+      if (htmlStart === -1 && obsidianStart === -1) {
         output += line.slice(index);
         break;
       }
+
+      const startsHtml = htmlStart !== -1 && (obsidianStart === -1 || htmlStart < obsidianStart);
+      const start = startsHtml ? htmlStart : obsidianStart;
       output += line.slice(index, start);
-      index = start + 2;
-      inComment = true;
+      index = start + (startsHtml ? 4 : 2);
+      comment = startsHtml ? "html" : "obsidian";
     }
     return output;
   }).join("\n");
