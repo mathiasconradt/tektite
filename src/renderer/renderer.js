@@ -89,6 +89,12 @@ const EXTERNAL_NOTE_POLL_MS = 2000;
 
 function log() { /* verbose logging disabled */ }
 
+function runAsync(task) {
+  Promise.resolve()
+    .then(task)
+    .catch(log);
+}
+
 const els = {
   vaultName: document.getElementById("vaultName"),
   openVaultButton: document.getElementById("openVaultButton"),
@@ -214,10 +220,10 @@ function boot() {
   applyLayout();
   applyEditorLineWrap();
   updateSuffixButton();
-  els.openVaultButton.addEventListener("click", chooseVault);
-  els.refreshButton.addEventListener("click", refreshVault);
-  els.gitSyncButton.addEventListener("click", syncGitVault);
-  els.githubSyncButton.addEventListener("click", syncGitVault);
+  els.openVaultButton.addEventListener("click", () => runAsync(() => chooseVault()));
+  els.refreshButton.addEventListener("click", () => runAsync(() => refreshVault()));
+  els.gitSyncButton.addEventListener("click", () => runAsync(() => syncGitVault()));
+  els.githubSyncButton.addEventListener("click", () => runAsync(() => syncGitVault()));
   els.themeButton.addEventListener("click", toggleTheme);
   els.searchInput.addEventListener("input", renderTree);
   els.editor.addEventListener("input", onEditorInput);
@@ -228,18 +234,18 @@ function boot() {
   els.editor.addEventListener("focus", updateCurrentLineHighlight);
   els.editor.addEventListener("blur", () => els.currentLineHighlight.style.opacity = "0");
   document.addEventListener("selectionchange", () => { if (document.activeElement === els.editor) updateCurrentLineHighlight(); });
-  els.editor.addEventListener("paste", onEditorPaste);
+  els.editor.addEventListener("paste", (event) => runAsync(() => onEditorPaste(event)));
   els.editor.addEventListener("dragover", onEditorDragOver);
-  els.editor.addEventListener("drop", onEditorDrop);
+  els.editor.addEventListener("drop", (event) => runAsync(() => onEditorDrop(event)));
   els.fileTree.addEventListener("dragstart", onTreeDragStart);
   els.fileTree.addEventListener("dragover", onTreeDragOver);
-  els.fileTree.addEventListener("drop", onTreeDrop);
+  els.fileTree.addEventListener("drop", (event) => runAsync(() => onTreeDrop(event)));
   els.fileTree.addEventListener("contextmenu", onTreeContextMenu);
   els.fileTree.addEventListener("click", closeTreeContextMenu);
   els.fileTree.addEventListener("keydown", onTreeKeydown);
   els.preview.addEventListener("click", onPreviewClick);
   els.preview.addEventListener("contextmenu", onPreviewContextMenu);
-  els.previewPrintButton.addEventListener("click", printCurrentPreview);
+  els.previewPrintButton.addEventListener("click", () => runAsync(() => printCurrentPreview()));
   els.previewBackButton.addEventListener("click", goBackPreviewHistory);
   els.previewForwardButton.addEventListener("click", goForwardPreviewHistory);
   els.graphSvg.addEventListener("click", onGraphClick);
@@ -271,17 +277,17 @@ function boot() {
   globalThis.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "r") {
       event.preventDefault();
-      refreshVault();
+      runAsync(() => refreshVault());
       return;
     }
     if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === "KeyF") {
       event.preventDefault();
-      createFolder();
+      runAsync(() => createFolder());
       return;
     }
     if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === "KeyR") {
       event.preventDefault();
-      if (state.selectedPath) renameSelectedEntry();
+      if (state.selectedPath) runAsync(() => renameSelectedEntry());
       return;
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f" && !event.shiftKey) {
@@ -348,14 +354,14 @@ function boot() {
   });
   globalThis.addEventListener("beforeunload", saveWorkspaceState);
 
-  globalThis.tektite.onOpenVault(chooseVault);
-  globalThis.tektite.onOpenRecentVault(openVault);
-  globalThis.tektite.onNewNote(() => createNote());
-  globalThis.tektite.onNewFolder(() => createFolder());
+  globalThis.tektite.onOpenVault(() => runAsync(() => chooseVault()));
+  globalThis.tektite.onOpenRecentVault((rootPath) => runAsync(() => openVault(rootPath)));
+  globalThis.tektite.onNewNote(() => runAsync(() => createNote()));
+  globalThis.tektite.onNewFolder(() => runAsync(() => createFolder()));
   globalThis.tektite.onCloseTab(closeActiveEditorTab);
-  globalThis.tektite.onCloseAllTabs(closeAllEditorTabs);
-  globalThis.tektite.onPrintPreview(printCurrentPreview);
-  globalThis.tektite.onRefreshVault(refreshVault);
+  globalThis.tektite.onCloseAllTabs(() => runAsync(() => closeAllEditorTabs()));
+  globalThis.tektite.onPrintPreview(() => runAsync(() => printCurrentPreview()));
+  globalThis.tektite.onRefreshVault(() => runAsync(() => refreshVault()));
   globalThis.tektite.onToggleFileSuffixes(toggleFileExtensions);
   globalThis.tektite.onToggleTheme(toggleTheme);
   globalThis.tektite.onToggleEditorPane(toggleEditorPane);
@@ -1437,7 +1443,7 @@ function renderMentionMenu() {
   newNodeOption.innerHTML = `<span>New Node</span><small>${escapeHtml(mentionDefaultName())}</small>`;
   newNodeOption.addEventListener("mousedown", (event) => {
     event.preventDefault();
-    createMentionNode();
+    runAsync(() => createMentionNode());
   });
   els.mentionMenu.appendChild(newNodeOption);
 
@@ -2162,10 +2168,10 @@ function renderEditorTabs() {
     `;
     button.addEventListener("click", (event) => {
       if (event.target.closest(".editor-tab-close")) {
-        closeEditorTab(tab.path, tab.type);
+        runAsync(() => closeEditorTab(tab.path, tab.type));
         return;
       }
-      activateTab(tab.path, tab.type);
+      runAsync(() => activateTab(tab.path, tab.type));
     });
     button.addEventListener("contextmenu", (event) => {
       event.preventDefault();
@@ -2205,7 +2211,7 @@ async function closeEditorTab(path, type) {
 
 function closeActiveEditorTab() {
   if (!state.activePath || !state.activeType) return;
-  closeEditorTab(state.activePath, state.activeType);
+  runAsync(() => closeEditorTab(state.activePath, state.activeType));
 }
 
 async function closeAllEditorTabs() {
@@ -2625,7 +2631,7 @@ function onMentionMenuKeydown(event) {
     renderMentionMenu();
   } else if (event.key === "Enter" || event.key === "Tab") {
     event.preventDefault();
-    if (state.mention.selectedIndex === 0) createMentionNode();
+    if (state.mention.selectedIndex === 0) runAsync(() => createMentionNode());
     else if (state.mention.selectedIndex === 1) insertTableOfContents({ replaceMention: true });
     else insertMentionLink(state.mention.items[state.mention.selectedIndex - MENTION_ACTION_COUNT]);
   } else if (event.key === "Escape") {
@@ -2972,8 +2978,8 @@ function renderTreeLeafNode(node, query) {
   button.dataset.type = node.type;
   button.innerHTML = `<span class="tree-caret-spacer" aria-hidden="true"></span>${treeIconSvg(node.type)}<span class="tree-label">${escapeHtml(label)}</span>`;
   button.addEventListener("click", () => {
-    if (node.type === "note") openNote(node.path, { focusEditor: false });
-    else openAsset(node.path, { focusEditor: false });
+    if (node.type === "note") runAsync(() => openNote(node.path, { focusEditor: false }));
+    else runAsync(() => openAsset(node.path, { focusEditor: false }));
     els.fileTree.focus();
   });
   return button;
@@ -3131,12 +3137,12 @@ function openTreeContextMenu(x, y, context) {
     {
       label: "New node",
       shortcut: "⇧⌘N",
-      action: () => createNote(context)
+      action: () => runAsync(() => createNote(context))
     },
     {
       label: "New folder",
       shortcut: "⇧⌘F",
-      action: () => createFolder(context)
+      action: () => runAsync(() => createFolder(context))
     }
   ];
 
@@ -3154,17 +3160,17 @@ function openTreeContextMenu(x, y, context) {
       {
         label: isFolder ? "Rename folder" : "Rename file",
         shortcut: "⇧⌘R",
-        action: () => renameSelectedEntry(context)
+        action: () => runAsync(() => renameSelectedEntry(context))
       },
       {
         label: "Move...",
-        action: () => moveSelectedEntry(context)
+        action: () => runAsync(() => moveSelectedEntry(context))
       },
       {
         label: isFolder ? "Delete folder" : "Delete file",
         shortcut: "⌘⌫",
         danger: true,
-        action: () => deleteSelectedEntry(context)
+        action: () => runAsync(() => deleteSelectedEntry(context))
       }
     );
   }
@@ -3189,7 +3195,7 @@ function showContextMenu(x, y, items) {
     button.innerHTML = `<span>${escapeHtml(item.label)}</span>${shortcutHtml}`;
     button.addEventListener("click", () => {
       closeTreeContextMenu();
-      item.action();
+      runAsync(item.action);
     });
     els.treeContextMenu.appendChild(button);
   }
@@ -3211,9 +3217,9 @@ function onTabContextMenu(event, path, type) {
 function openTabContextMenu(x, y, path, type) {
   closeTreeContextMenu();
   const items = [
-    { label: "Close Tab", shortcut: "⌘W", action: () => closeEditorTab(path, type) },
+    { label: "Close Tab", shortcut: "⌘W", action: () => runAsync(() => closeEditorTab(path, type)) },
     { type: "separator" },
-    { label: "Close All Tabs", action: closeAllEditorTabs }
+    { label: "Close All Tabs", action: () => runAsync(() => closeAllEditorTabs()) }
   ];
   showTabContextMenu(x, y, items);
 }
@@ -3234,7 +3240,7 @@ function showTabContextMenu(x, y, items) {
     button.innerHTML = `<span>${escapeHtml(item.label)}</span>${shortcutHtml}`;
     button.addEventListener("click", () => {
       closeTabContextMenu();
-      item.action();
+      runAsync(item.action);
     });
     els.tabContextMenu.appendChild(button);
   }
@@ -3290,17 +3296,17 @@ function onTreeKeydown(event) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key === "Backspace") {
     event.preventDefault();
-    if (state.selectedPath) deleteSelectedEntry(currentSelection());
+    if (state.selectedPath) runAsync(() => deleteSelectedEntry(currentSelection()));
     return;
   }
   if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === "KeyF") {
     event.preventDefault();
-    createFolder(currentSelection());
+    runAsync(() => createFolder(currentSelection()));
     return;
   }
   if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === "KeyR") {
     event.preventDefault();
-    if (state.selectedPath) renameSelectedEntry(currentSelection());
+    if (state.selectedPath) runAsync(() => renameSelectedEntry(currentSelection()));
     return;
   }
   const rows = getVisibleTreeRows();
@@ -3310,8 +3316,8 @@ function onTreeKeydown(event) {
 }
 
 function activateTreeRow(path, type, { toggle = false } = {}) {
-  if (type === "note") openNote(path, { focusEditor: false });
-  else if (type === "asset") openAsset(path, { focusEditor: false });
+  if (type === "note") runAsync(() => openNote(path, { focusEditor: false }));
+  else if (type === "asset") runAsync(() => openAsset(path, { focusEditor: false }));
   else {
     selectEntry(path, type);
     if (toggle) toggleFolder(path);
@@ -3363,6 +3369,17 @@ function collapsedFoldersKey() {
 
 function renderPreview(markdown) {
   els.preview.innerHTML = markdownToHtml(markdown, state.activePath);
+  highlightPreviewCode();
+}
+
+function highlightPreviewCode() {
+  const highlighter = globalThis.hljs;
+  if (!highlighter?.highlightElement) return;
+  els.preview.querySelectorAll("pre code").forEach((block) => {
+    try {
+      highlighter.highlightElement(block);
+    } catch {}
+  });
 }
 
 async function printCurrentPreview() {
@@ -3400,7 +3417,9 @@ function markdownToHtml(markdown, sourcePath = "") {
     list: [],
     table: null,
     inCode: false,
-    code: []
+    code: [],
+    codeFence: null,
+    codeLanguage: ""
   };
 
   for (const line of visibleMarkdown.replaceAll("\r\n", "\n").split("\n")) {
@@ -3428,7 +3447,7 @@ function stripMarkdownComments(markdown) {
   let inComment = false;
 
   return lines.map((line) => {
-    if (line.startsWith("```")) {
+    if (isMarkdownCodeFenceLine(line)) {
       inCode = !inCode;
       return line;
     }
@@ -3466,8 +3485,14 @@ function appendListItem(context, match, tag) {
 }
 
 function processMarkdownLine(context, line) {
-  if (line.startsWith("```")) return toggleMarkdownCode(context);
-  if (context.inCode) { context.code.push(line); return; }
+  if (context.inCode) {
+    if (isClosingMarkdownCodeFence(context, line)) return toggleMarkdownCode(context);
+    context.code.push(stripMarkdownCodeIndent(context, line));
+    return;
+  }
+
+  const codeFence = markdownCodeFence(line);
+  if (codeFence) return toggleMarkdownCode(context, codeFence);
   if (!line.trim()) return flushMarkdownBlocks(context);
 
   const heading = line.match(/^(#{1,6})\s+([^\r\n]+)/);
@@ -3494,14 +3519,57 @@ function processMarkdownLine(context, line) {
   context.paragraph.push(line.trim());
 }
 
-function toggleMarkdownCode(context) {
+function markdownCodeFence(line) {
+  const match = line.match(/^( {0,3})(`{3,}|~{3,})(.*)$/);
+  if (!match) return null;
+  return {
+    indent: match[1].length,
+    marker: match[2][0],
+    length: match[2].length,
+    info: match[3].trim()
+  };
+}
+
+function isMarkdownCodeFenceLine(line) {
+  return Boolean(markdownCodeFence(line));
+}
+
+function isClosingMarkdownCodeFence(context, line) {
+  const fence = markdownCodeFence(line);
+  return Boolean(
+    fence &&
+    context.codeFence &&
+    fence.marker === context.codeFence.marker &&
+    fence.length >= context.codeFence.length &&
+    !fence.info
+  );
+}
+
+function stripMarkdownCodeIndent(context, line) {
+  const indent = context.codeFence?.indent || 0;
+  if (!indent) return line;
+  let remove = 0;
+  while (remove < indent && line[remove] === " ") remove += 1;
+  return line.slice(remove);
+}
+
+function markdownCodeLanguage(info = "") {
+  const language = info.split(/\s+/)[0] || "";
+  return language.replace(/[^\w-]/g, "");
+}
+
+function toggleMarkdownCode(context, fence = null) {
   if (context.inCode) {
     flushMarkdownCode(context, true);
     context.inCode = false;
+    context.codeFence = null;
+    context.codeLanguage = "";
     return;
   }
   flushMarkdownBlocks(context);
   context.inCode = true;
+  context.codeFence = fence;
+  context.codeLanguage = markdownCodeLanguage(fence?.info || "");
 }
 
 function flushMarkdownBlocks(context) {
@@ -3569,7 +3637,8 @@ function flushMarkdownList(context) {
 
 function flushMarkdownCode(context, force = false) {
   if (!force && !context.code.length) return;
-  context.blocks.push(`<pre><code>${escapeHtml(context.code.join("\n"))}</code></pre>`);
+  const languageClass = context.codeLanguage ? ` class="language-${escapeAttr(context.codeLanguage)}"` : "";
+  context.blocks.push(`<pre><code${languageClass}>${escapeHtml(context.code.join("\n"))}</code></pre>`);
   context.code = [];
 }
 
@@ -4137,7 +4206,7 @@ function stopGraphPan() {
   els.graphSvg.classList.remove("panning", "dragging-node");
   globalThis.removeEventListener("pointermove", onGraphPointerMove);
   globalThis.removeEventListener("pointercancel", stopGraphPan);
-  if (shouldOpen) openNote(notePath);
+  if (shouldOpen) runAsync(() => openNote(notePath));
 }
 
 function graphPointFromEvent(event) {
@@ -4200,7 +4269,7 @@ function onPreviewContextMenu(event) {
   if (!url) return;
   event.preventDefault();
   showContextMenu(event.clientX, event.clientY, [
-    { label: "Copy link", action: () => navigator.clipboard.writeText(url) }
+    { label: "Copy link", action: () => runAsync(() => navigator.clipboard.writeText(url)) }
   ]);
 }
 
@@ -4240,7 +4309,8 @@ function openNoteFromPreviewLink(notePath, anchor = "") {
     if (lastPath !== state.activePath) state.previewHistory.push(state.activePath);
   }
   state.previewForwardHistory = [];
-  openNote(notePath, { preservePreviewHistory: true }).then(() => {
+  runAsync(async () => {
+    await openNote(notePath, { preservePreviewHistory: true });
     scrollPreviewToAnchor(anchor);
   });
 }
@@ -4249,14 +4319,14 @@ function goBackPreviewHistory() {
   const previousPath = state.previewHistory.pop();
   if (!previousPath) return updatePreviewNavButtons();
   if (state.activePath && state.activeType === "note") state.previewForwardHistory.push(state.activePath);
-  openNote(previousPath, { preservePreviewHistory: true });
+  runAsync(() => openNote(previousPath, { preservePreviewHistory: true }));
 }
 
 function goForwardPreviewHistory() {
   const nextPath = state.previewForwardHistory.pop();
   if (!nextPath) return updatePreviewNavButtons();
   if (state.activePath && state.activeType === "note") state.previewHistory.push(state.activePath);
-  openNote(nextPath, { preservePreviewHistory: true });
+  runAsync(() => openNote(nextPath, { preservePreviewHistory: true }));
 }
 
 function updatePreviewNavButtons() {
@@ -4269,7 +4339,7 @@ function onGraphClick(event) {
   const node = event.target.closest("[data-note-path]");
   if (!node) return;
   event.preventDefault();
-  openNote(node.dataset.notePath);
+  runAsync(() => openNote(node.dataset.notePath));
 }
 
 function activeFolder() {

@@ -87,7 +87,7 @@ function vaultArgFromArgv(argv) {
   return null;
 }
 
-async function handleVaultArg(vaultPath) {
+function handleVaultArg(vaultPath) {
   if (!vaultPath || typeof vaultPath !== "string") return;
   if (windowManager.focusVaultWindow(vaultPath)) return;
   windowManager.createWindow({ vaultPath });
@@ -117,7 +117,9 @@ async function restoreSessions() {
 
 function handleArgVaultAfterRestore(normalizedArgVault, invalidArgVault, restoredVaults) {
   if (invalidArgVault) {
-    setTimeout(() => showVaultUnavailableDialog(null, invalidArgVault), splashMinimumMs + 200);
+    setTimeout(() => {
+      showVaultUnavailableDialog(null, invalidArgVault).catch(log);
+    }, splashMinimumMs + 200);
     return;
   }
   if (!normalizedArgVault) return;
@@ -133,7 +135,7 @@ if (gotSingleInstanceLock) {
   app.on("second-instance", (_event, argv) => {
     const result = vaultArgFromArgv(argv);
     if (result?.invalid) {
-      showVaultUnavailableDialog(null, result.path);
+      showVaultUnavailableDialog(null, result.path).catch(log);
     } else if (result) {
       handleVaultArg(result);
     } else {
